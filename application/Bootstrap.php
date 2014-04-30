@@ -20,9 +20,9 @@ class Bootstrap extends Zend_Application_Bootstrap_Bootstrap {
                 'namespace' => 'Business'
             )
         ));
-        
+
         // Adiciona o diretorio de helpers
-        Zend_Controller_Action_HelperBroker::addPath(APPLICATION_PATH .'/controllers/helpers');
+        Zend_Controller_Action_HelperBroker::addPath(APPLICATION_PATH . '/controllers/helpers');
 
         // Return to bootstrap resource registry
         return $autoloader;
@@ -36,7 +36,7 @@ class Bootstrap extends Zend_Application_Bootstrap_Bootstrap {
     protected function _initHelpers() {
         $viewRenderer = Zend_Controller_Action_HelperBroker::getStaticHelper('viewRenderer');
         $viewRenderer->initView();
-        
+
         // add zend action helper path
         Zend_Controller_Action_HelperBroker::addPath('application/controllers/helpers/');
     }
