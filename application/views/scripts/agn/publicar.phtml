@@ -1,0 +1,70 @@
+<div class="container-login">
+    <h2>Publicação automatizada no Ads</h2>
+    
+    <div class="form formPublicar">
+        <form method="post" id="frmPublicacao">
+            <div class="field">
+                <label>Email:</label>
+                <input name="email" type="text" />
+                <div class="clear"></div>
+            </div>
+            
+            <div class="field">
+                <label>Senha:</label>
+                <input name="senha" type="password" />
+                <div class="clear"></div>
+            </div>
+            <br /><br />
+            
+            <div class="dvLoad">
+                <img src="/img/aguarde.gif" />
+                <br />
+            </div>
+            
+            <div class="field">
+                <input type="submit" value="Publicar" class="btn" />
+            </div>
+        </form>
+    </div>
+    
+    <div class="msg hidden">
+        <b>Publicação realizada com sucesso!</b>
+        <br /><br /><br />
+        
+        <input type="button" class="btn btnPublicarNovo" value="Publicar Novo"/>
+    </div>
+</div>
+
+<!-- JavaScrjpt -->
+<script>
+    //Submete o formulário
+    $("#frmPublicacao").submit(function() {
+        if ($("input[name=email]").val() == '' || $("input[name=senha]").val() == '' ) {
+            return false;
+        }
+        
+        var data = {
+            email: $("input[name=email]").val(),
+            senha: $("input[name=senha]").val()
+        };
+        $("div.dvLoad").show();
+        
+        $.post("/agn/publicar", data, function(rs) {
+            if(rs.sucesso && rs.sucesso === 1) {
+                $(".formPublicar").hide();
+                $("div.msg").show();
+                $("div.dvLoad").hide();
+            } else {
+                alert("Erro inesperado!");
+            }
+        }, 'json');
+        
+        return false;
+    });
+    
+    //Reiniciar o formulário
+    $(".btnPublicarNovo").click(function() {
+        $(".formPublicar").show();
+        $("div.msg").hide();
+    });
+</script>

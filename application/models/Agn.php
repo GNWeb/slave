@@ -69,6 +69,7 @@ http://www.argentglobalnetwork.com/?terhacker1"
     public function obterAnuncio() {
         $kMax = count($this->listaAds) - 1;
         $key = rand(0, $kMax);
+
         return $this->listaAds[$key];
     }
 
