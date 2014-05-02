@@ -20,15 +20,16 @@ class Business_FreeAds {
      * Publica a propaganda no site Aufreeds
      * @param string $usuario
      * @param string $senha
-     * @param integer $idUsuario
-     * @param string $adTitle
-     * @param string $adDescription 
+     * @return string Url da publicação
      */
-    public function publicarAufreeads($usuario, $senha, $idUsuario) {
+    public function publicarAufreeads($usuario, $senha) {
         //Define os parâmetros fixos
-        $adLink = "http://www.ukadslist.com/post/post-free-ads.php";
-        $adLinkAct = "http://www.ukadslist.com/post/post-free-ads-op.php";
+        $codSite = 6523;
+        $adSite = "http://www.ukadslist.com";
+        $adLink = $adSite . "/post/post-free-ads.php";
+        $adLinkAct = $adSite . "/post/post-free-ads-op.php";
         $categoria = '0903';
+        
         //Carrega uma opção de anúncio
         $mdlAgn = new Model_Agn();
         $anuncio = $mdlAgn->obterAnuncio();
@@ -38,39 +39,46 @@ class Business_FreeAds {
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
         // Define o tipo de transferência (Padrão: 1)
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        //Recupera o captcha
-        $captcha = $this->lerCaptchaAufreeads($ch, $adLink);
-        //Espera enquanto o servidor adicionar o captcha à sessão
-        sleep(10);
-        // Habilita o protocolo POST
-        curl_setopt($ch, CURLOPT_POST, 1);
-        // Imita o comportamento patrão dos navegadores: manipular cookies
-        curl_setopt($ch, CURLOPT_COOKIEJAR, 'cookie.txt');
         
-        //Monta os parâmetros para ser enviado via curl
-        $post = "adTitle=" . $anuncio['titulo'];
-        $post .= "&adDescription=" . $anuncio['descricao'];
-        $post .= "&category=" . $categoria;
-        $post .= "&ownerName=" . $usuario;
-        $post .= "&adPasscode=" . $senha;
-        $post .= "&validationCode=" . $captcha['codigo'];        
-        $post .= "&vcid=" . $captcha['vcid'];        
-echo $post;        
-        // Define a URL original (do formulário de login)
-        curl_setopt($ch, CURLOPT_URL, $adLinkAct);
-        // Define os parâmetros que serão enviados
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
-        //HTML da página resultado (depois do submit do login)
-        $result = curl_exec($ch);
-echo $result;        
+        //Força a repetição do procedimento até obter o sucesso
+        $flgSucesso = false;
+        
+        do {
+            //Recupera o captcha
+            $captcha = $this->lerCaptchaAufreeads($ch, $adLink);
+            //Espera enquanto o servidor adicionar o captcha à sessão
+            sleep(10);
+            // Habilita o protocolo POST
+            curl_setopt($ch, CURLOPT_POST, 1);
+            // Imita o comportamento patrão dos navegadores: manipular cookies
+            curl_setopt($ch, CURLOPT_COOKIEJAR, 'tmp/cookie.txt');
+
+            //Monta os parâmetros para ser enviado via curl
+            $post = "adTitle=" . $anuncio['titulo'];
+            $post .= "&adDescription=" . $anuncio['descricao'];
+            $post .= "&category=" . $categoria;
+            $post .= "&ownerName=" . $usuario;
+            $post .= "&adPasscode=" . $senha;
+            $post .= "&validationCode=" . $captcha['codigo'];        
+            $post .= "&vcid=" . $captcha['vcid'];        
+
+            // Define a URL original (do formulário de login)
+            curl_setopt($ch, CURLOPT_URL, $adLinkAct);
+            // Define os parâmetros que serão enviados
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
+
+            //HTML da página resultado (depois do submit do login)
+            $result = curl_exec($ch);
+            $flgSucesso = $this->tratarErros($result);
+        } while( !$flgSucesso );
+        
         // Encerra o cURL
         curl_close($ch);
         //Extrai o link de validação
         $linkPublic = $this->extrairLinkValidacao($result);
 
-        echo ">>>>" . $linkPublic;
-        die;
-
+        $linkPublicacao = $adSite . $linkPublic;
+        return $linkPublicacao;
     }
 
     /**
@@ -99,7 +107,7 @@ echo $result;
         //Recupera o vcid
         $inputVcidDom = pq("form#fPostAd input[name=vcid]", $doc);
         $captcha['vcid'] = $inputVcidDom->val();
-        echo "<img src='{$captchaSrc}'>";
+        //echo "<img src='{$captchaSrc}'>";
         $captcha['codigo'] = $ocr->result;
         
         return $captcha;
@@ -117,6 +125,39 @@ echo $result;
         return pq($linkDom)->attr('href');
     }
 
+    /**
+     * Trata os erros na resposta do site em html
+     * @param string $html 
+     * @return boolean
+     */
+    public function tratarErros($html) {
+       
+        //Inicia a manipulação do html
+        $doc = phpQuery::newDocumentHTML($html);
+        $listaLiDom = pq("ul.ssListErrMsg li", $doc);
+        $listaDivDom = pq("div.ssPostResult p", $doc);
+        //Percorre as mensagens
+        foreach( $listaLiDom as $liDom ) {
+            $texto = pq($liDom)->text();
+   
+            //Erro na validação do captcha
+            if( !(strpos($texto, "The validation code is incorrect") === FALSE) ) {
+                return false;
+            }
+        }
+        foreach( $listaDivDom as $divDom ) {
+            $texto = pq($divDom)->text();
+            
+            //Publicação repetida
+            if( !(strpos($texto, "of an existing ad posted recently") === FALSE) ) {
+                return false;
+            }
+        }
+        
+        //Sucesso
+        //echo $html;
+        return true;
+    }
 }
 
 ?>

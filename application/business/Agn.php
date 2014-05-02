@@ -23,19 +23,24 @@ class Business_Agn {
     private $urlLogin = 'https://www.argentglobalnetwork.com/handler.php?h=user_login';
     
     /**
+     * Redirecionamento após a autenticação
+     */
+    private $urlRdirect = 'https://www.argentglobalnetwork.com/backoffice/index.html';
+    
+    /**
+     * Página utilizada para recuperar o login
+     */
+    private $urlGetLogin = 'https://www.argentglobalnetwork.com/backoffice/refferals.html';
+    
+    /**
      * Email/Usuário da AGN
      */
-    private $email = 'gustavonobrega.efti@gmail.com';
+    private $email;
     
     /**
      * Senha de autenticação na AGN
      */
-    private $senha = '090288';
-    
-    /**
-     * Redirecionamento após a autenticação
-     */
-    private $urlRdirect = 'https://www.argentglobalnetwork.com/backoffice/index.html';
+    private $senha;
 
     /**
      * Lista de anúncios disponíveis
@@ -94,10 +99,23 @@ http://www.argentglobalnetwork.com/?terhacker1"
     );
     
     /**
-     * Efetua o login na AGN através do curl
+     * Construtor
      */
-    private function efetuarLogin() {
-
+    public function Business_Agn() {
+        //Importa a classe de seletores/dom
+        require_once("phpQuery/phpQuery.php");
+    }
+    
+    /**
+     * Efetua o login na AGN através do curl
+     * @param string $email
+     * @param string $senha
+     */
+    public function efetuarLogin($email, $senha) {
+        //Parametros
+        $this->email = $email;
+        $this->senha = $senha;
+        
         // Inicia o cURL
         if (!$this->ch) {
             $this->ch = curl_init();
@@ -115,7 +133,7 @@ http://www.argentglobalnetwork.com/?terhacker1"
         curl_setopt($this->ch, CURLOPT_POSTFIELDS, 'formloginemail=' . $this->email . '&formloginpassw= ' . $this->senha);
 
         // Imita o comportamento patrão dos navegadores: manipular cookies
-        curl_setopt($this->ch, CURLOPT_COOKIEJAR, 'cookie.txt');
+        curl_setopt($this->ch, CURLOPT_COOKIEJAR, 'tmp/cookie.txt');
 
         // Define o tipo de transferência (Padrão: 1)
         curl_setopt($this->ch, CURLOPT_RETURNTRANSFER, 1);
@@ -134,15 +152,22 @@ http://www.argentglobalnetwork.com/?terhacker1"
 
     /**
      * Valida a url do anúncio
-     * @param strin $urlAd Url gerada com a publicação
-     * @param int $idUsuario Identificação do usuário
+     * @param string $email
+     * @param string $senha
+     * @param string $urlAd Url gerada com a publicação
      */
-    public function validarAnuncio($urlAd, $idUsuario) {
+    public function validarAnuncio($email, $senha, $urlAd) {
+        //Parâmetros
+        $this->email = $email;
+        $this->senha = $senha;
         //Constante
         $link2 = "http://www.ukadslist.com/";
 
         //Realiza a autenticação
-        $this->efetuarLogin();
+        $this->efetuarLogin($email, $senha);
+        
+        //Obter código
+        $codValid = $this->obterCodigoValidacao();
         
         //Envia os parâmetros para a validação
         // Define uma nova URL para ser chamada (após o login)
@@ -152,13 +177,22 @@ http://www.argentglobalnetwork.com/?terhacker1"
         curl_setopt($this->ch, CURLOPT_POST, 1);
 
         // Define os parâmetros que serão enviados (usuário e senha por exemplo)
-        curl_setopt($this->ch, CURLOPT_POSTFIELDS, 'link1=' . $urlAd . '&number= ' . $idUsuario . '&link2=' . $link2);
+        $dataPost ='link1=' . $urlAd . '&nm=' . $codValid . '&link2=' . $link2;
+        curl_setopt($this->ch, CURLOPT_POSTFIELDS, $dataPost);
 
         // Executa a requisição
-        echo $content = curl_exec($this->ch);
+        $html = curl_exec($this->ch);
         
         // Encerra o cURL
         curl_close($this->ch);
+        
+        //Resposta
+        if( $html == '' ) {
+            return true;
+        } else {
+            echo $html;
+            return false;
+        }
     }
     
     /**
@@ -168,6 +202,50 @@ http://www.argentglobalnetwork.com/?terhacker1"
         $kMax = count($this->listaAds) - 1;
         $key = rand(0, $kMax);
         return $this->listaAds[$key];
+    }
+    
+    /**
+     * Recupera um código necessário para a validação do link
+     * @return integer
+     */
+    private function obterCodigoValidacao() {
+        // Define uma nova URL para ser chamada (após o login)
+        curl_setopt($this->ch, CURLOPT_URL, $this->urlAdValid);
+        
+        // Desabilita o protocolo POST
+        curl_setopt($this->ch, CURLOPT_POST, FALSE);
+        
+        //Executa a requisição
+        $html = curl_exec($this->ch);
+        
+        //Inicia a manipulação do html
+        $doc = phpQuery::newDocumentHTML($html);
+        //Recupera o codigo
+        $inputDom = pq("input[name=nm]", $doc);
+        $codigo = pq($inputDom)->val();
+        
+        return $codigo;
+    }
+    
+    /**
+     * Recupera o login
+     * @return string
+     */
+    public function obterLogin() {
+        // Define uma nova URL para ser chamada (após o login)
+        curl_setopt($this->ch, CURLOPT_URL, $this->urlGetLogin);
+        
+        //Executa a requisição
+        $html = curl_exec($this->ch);
+        
+        //Inicia a manipulação do html
+        $doc = phpQuery::newDocumentHTML($html);
+        //Recupera o login
+        $liDom = pq("div.content_pad ul.arrow li", $doc);
+        $url = pq($liDom)->eq(0)->html();
+        $pos = strpos($url, "?") + 1;
+        $login = substr($url, $pos);
+        return $login;
     }
 
 }
