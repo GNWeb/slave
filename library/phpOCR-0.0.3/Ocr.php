@@ -18,8 +18,8 @@ class Ocr {
         $conf['default_image'] = $img;
 
 
-        imagepng(imagecreatefromstring(file_get_contents($conf['default_image'])), "output.png");
-        $conf['default_image'] = 'output.png';
+        imagepng(imagecreatefromstring(file_get_contents($conf['default_image'])), "./tmp/output.png");
+        $conf['default_image'] = './tmp/output.png';
 
 
         //The default output format. You can chose from xml,html,plain,template.
