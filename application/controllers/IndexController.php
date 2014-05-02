@@ -11,6 +11,10 @@ class IndexController extends Zend_Controller_Action
         Zend_Debug::dump($_REQUEST);
         die;
     }
+    
+    public function indexAction() {
+        
+    }
 
 }
 
