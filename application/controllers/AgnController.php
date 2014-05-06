@@ -13,7 +13,7 @@ class AgnController extends Zend_Controller_Action
      */
     public function publicarAction() {
         //Exibe o formulário
-        if( !isset($_POST) || count($_POST) == 0 ) {
+        if( count($_POST) == 0 && count($_GET) == 0 ) {
             //Carrega a view
         } else { //Submete os dados
         
@@ -21,8 +21,8 @@ class AgnController extends Zend_Controller_Action
             set_time_limit(0);
 
             //Parametros
-            $email = $_POST['email'];
-            $senha = $_POST['senha'];
+            $email = $_REQUEST['email'];
+            $senha = $_REQUEST['senha'];
 
             //Efetua o login
             $bsnAgn = new Business_Agn();
